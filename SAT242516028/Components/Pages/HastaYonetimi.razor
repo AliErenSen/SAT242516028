@@ -1,0 +1,145 @@
+﻿@page "/hastalar"
+@using SAT242516028.Models // Projenizin Models klasörünün doğru namespace'i
+@using SAT242516028.Data   // Projenizin Data klasörünün doğru namespace'i
+@inject LaboratuvarServisi LabService 
+@inject NavigationManager NavigationManager
+
+<h3>Hasta Yönetimi</h3>
+
+<EditForm Model="@yeniHasta" OnValidSubmit="HandleKaydet">
+    <DataAnnotationsValidator />
+
+    <h4>@formBaslik</h4>
+
+    <div class="mb-3">
+        <label>T.C. Kimlik No</label>
+        <InputText class="form-control" @bind-Value="yeniHasta.TCKimlikNo" />
+        <ValidationMessage For="@(() => yeniHasta.TCKimlikNo)" />
+    </div>
+    <div class="mb-3">
+        <label>Ad</label>
+        <InputText class="form-control" @bind-Value="yeniHasta.Ad" />
+        <ValidationMessage For="@(() => yeniHasta.Ad)" />
+    </div>
+    <div class="mb-3">
+        <label>Soyad</label>
+        <InputText class="form-control" @bind-Value="yeniHasta.Soyad" />
+        <ValidationMessage For="@(() => yeniHasta.Soyad)" />
+    </div>
+    <div class="mb-3">
+        <label>Doğum Tarihi</label>
+        <InputDate class="form-control" @bind-Value="yeniHasta.DogumTarihi" />
+    </div>
+    <div class="mb-3">
+        <label>Telefon</label>
+        <InputText class="form-control" @bind-Value="yeniHasta.Telefon" />
+    </div>
+    <div class="mb-3">
+        <label>Adres</label>
+        <InputTextArea class="form-control" @bind-Value="yeniHasta.Adres" />
+    </div>
+    <div class="form-check mb-3">
+        <InputCheckbox class="form-check-input" @bind-Value="yeniHasta.Aktif" />
+        <label class="form-check-label">Aktif</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Kaydet</button>
+    <button type="button" class="btn btn-secondary" @onclick="FormuTemizle">İptal</button>
+</EditForm>
+
+<hr />
+
+<h4>Kayıtlı Hastalar</h4>
+@if (hastaListesi == null)
+{
+    <p><em>Yükleniyor...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>T.C. Kimlik No</th>
+                <th>Ad Soyad</th>
+                <th>Telefon</th>
+                <th>Aktif</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var hasta in hastaListesi)
+            {
+                <tr>
+                    <td>@hasta.TCKimlikNo</td>
+                    <td>@hasta.Ad @hasta.Soyad</td>
+                    <td>@hasta.Telefon</td>
+                    <td>@(hasta.Aktif ? "Evet" : "Hayır")</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => HandleDuzenle(hasta)">Düzenle</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => HandleSil(hasta.Id)">Sil</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    
+    private List<Hasta> hastaListesi;
+
+   
+    private Hasta yeniHasta = new Hasta() { Aktif = true, DogumTarihi = DateTime.Today };
+
+    
+    private string formBaslik = "Yeni Hasta Kayıt";
+    private string operation = "insert"; 
+
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await ListeyiYukle();
+    }
+
+    // Veritabanından listeyi çeken metot
+    private async Task ListeyiYukle()
+    {
+        // YENİ SERVİSİ VE METODU KULLANIR:
+        hastaListesi = await LabService.HastaListeleAsync();
+    }
+
+    // "Kaydet" butonuna basıldığında çalışır
+    private async Task HandleKaydet()
+    {
+        // YENİ SERVİSİ VE METODU KULLANIR:
+        await LabService.HastaKaydetAsync(yeniHasta, operation);
+
+        FormuTemizle(); // Formu sıfırla
+        await ListeyiYukle(); // Listeyi yenile
+    }
+
+    // "Düzenle" butonuna basıldığında çalışır
+    private void HandleDuzenle(Hasta duzenlenecekHasta)
+    {
+        yeniHasta = duzenlenecekHasta; // Formu seçilen hasta ile doldurur
+        operation = "update"; // İşlemi "güncelleme" olarak ayarlar
+        formBaslik = $"Düzenle: {yeniHasta.Ad} {yeniHasta.Soyad}";
+    }
+
+    // "Sil" butonuna basıldığında çalışır
+    private async Task HandleSil(int id)
+    {
+        // YENİ SERVİSİ VE METODU KULLANIR:
+        await LabService.HastaSilAsync(id);
+        await ListeyiYukle(); // Listeyi yenile
+    }
+
+    // "İptal" butonuna basıldığında veya kayıt sonrası formu temizler
+    private void FormuTemizle()
+    {
+        yeniHasta = new Hasta() { Aktif = true, DogumTarihi = DateTime.Today };
+        operation = "insert";
+        formBaslik = "Yeni Hasta Kayıt";
+    }
+}

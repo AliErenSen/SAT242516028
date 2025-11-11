@@ -1,0 +1,145 @@
+﻿@page "/raporlar"
+@using SAT242516028.Models // Projenizin Models namespace'i
+@using SAT242516028.Data   // Projenizin Data namespace'i
+@inject LaboratuvarServisi LabService // Yeni servisimiz
+@inject NavigationManager NavigationManager
+
+<h3>Rapor Yönetimi</h3>
+
+<EditForm Model="@yeniRaporFormu" OnValidSubmit="HandleRaporOlustur">
+    <DataAnnotationsValidator />
+
+    <h4>Yeni Rapor Oluştur</h4>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label>Hasta Seçin</label>
+            <InputSelect class="form-select" @bind-Value="yeniRaporFormu.HastaId">
+                <option value="0">--- Bir hasta seçin ---</option>
+                @if (hastaListesi != null)
+                {
+                    @foreach (var hasta in hastaListesi.Where(h => h.Aktif))
+                    {
+                        <option value="@hasta.Id">@hasta.Ad @hasta.Soyad (@hasta.TCKimlikNo)</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label>Doktor Seçin (İsteyen)</label>
+            <InputSelect class="form-select" @bind-Value="yeniRaporFormu.DoktorId">
+                <option value="0">--- Bir doktor seçin ---</option>
+                @if (doktorListesi != null)
+                {
+                    @foreach (var doktor in doktorListesi)
+                    {
+                        <option value="@doktor.Id">@doktor.AdSoyad</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label>Rapor Açıklaması (Opsiyonel)</label>
+        <InputTextArea class="form-control" @bind-Value="yeniRaporFormu.Aciklama" />
+    </div>
+
+    <button type="submit" class="btn btn-success">Yeni Rapor Oluştur</button>
+</EditForm>
+
+<hr />
+
+<h4>Sonuç Bekleyen Raporlar</h4>
+@if (bekleyenRaporlar == null)
+{
+    <p><em>Yükleniyor...</em></p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Rapor ID</th>
+                <th>Hasta Adı Soyadı</th>
+                <th>Doktor Adı Soyadı</th>
+                <th>Rapor Tarihi</th>
+                <th>Durum</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rapor in bekleyenRaporlar)
+            {
+                <tr>
+                    <td>@rapor.Id</td>
+                    <td>@rapor.HastaAdSoyad</td>
+                    <td>@rapor.DoktorAdSoyad</td>
+                    <td>@rapor.RaporTarihi.ToShortDateString()</td>
+                    <td><span class="badge bg-warning text-dark">@rapor.Durum</span></td>
+                    <td>
+                        <a href="/rapor-detay/@rapor.Id" class="btn btn-primary btn-sm">
+                            Sonuç Gir / Detay
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+   
+    private List<Hasta> hastaListesi;
+    private List<Doktor> doktorListesi;
+
+   
+    private List<Rapor> bekleyenRaporlar;
+
+    
+    private RaporFormModel yeniRaporFormu = new RaporFormModel();
+
+    // Sayfa yüklendiğinde tüm listeleri doldurur
+    protected override async Task OnInitializedAsync()
+    {
+        await ListeleriYukle();
+    }
+
+    // Gerekli tüm verileri servisten çeken yardımcı metot
+    private async Task ListeleriYukle()
+    {
+        // YENİ METOTLAR:
+        bekleyenRaporlar = await LabService.GetBekleyenRaporlarAsync();
+        hastaListesi = await LabService.HastaListeleAsync();
+        doktorListesi = await LabService.DoktorListeleAsync();
+    }
+
+    // "Yeni Rapor Oluştur" butonuna basıldığında çalışır
+    private async Task HandleRaporOlustur()
+    {
+        if (yeniRaporFormu.HastaId == 0 || yeniRaporFormu.DoktorId == 0)
+        {
+            // Basit bir doğrulama
+            Console.WriteLine("Hasta veya Doktor seçilmedi.");
+            return;
+        }
+
+        // YENİ METOT:
+        await LabService.RaporOlusturAsync(
+            yeniRaporFormu.HastaId,
+            yeniRaporFormu.DoktorId,
+            yeniRaporFormu.Aciklama
+        );
+
+        // Formu temizle ve listeyi yenile
+        yeniRaporFormu = new RaporFormModel();
+        await ListeleriYukle();
+    }
+
+    // EditForm'a bağlanmak için kullandığımız yardımcı iç sınıf
+    public class RaporFormModel
+    {
+        public int HastaId { get; set; }
+        public int DoktorId { get; set; }
+        public string Aciklama { get; set; }
+    }
+}

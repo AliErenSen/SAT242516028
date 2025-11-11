@@ -1,0 +1,131 @@
+﻿@page "/rapor-detay/{RaporId:int}"
+@using SAT242516028.Models
+@using SAT242516028.Data
+@inject LaboratuvarServisi LabService
+@inject NavigationManager NavigationManager
+
+<h3>Rapor Detayı (Rapor No: @RaporId)</h3>
+
+@if (raporunSonuclari == null || testTanimlari == null)
+{
+    <p><em>Yükleniyor...</em></p>
+}
+else
+{
+    <h4>Girilmiş Sonuçlar</h4>
+    @if (raporunSonuclari.Count == 0)
+    {
+        <p>Bu rapor için henüz sonuç girilmemiş.</p>
+    }
+    else
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Test Adı</th>
+                    <th>Sonuç Değeri</th>
+                    <th>Birim</th>
+                    <th>Referans Aralığı</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sonuc in raporunSonuclari)
+                {
+                    <tr>
+                        <td>@sonuc.TestAdi</td>
+                        <td><strong>@sonuc.Deger</strong></td>
+                        <td>@sonuc.Birim</td>
+                        <td>@sonuc.ReferansAralik</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <hr />
+
+    <h4>Yeni Sonuç Ekle</h4>
+    <EditForm Model="@yeniSonucFormu" OnValidSubmit="HandleSonucEkle">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Test Seçin</label>
+                <InputSelect class="form-select" @bind-Value="yeniSonucFormu.TestTanimiId">
+                    <option value="0">--- Bir test seçin ---</option>
+                    @foreach (var test in testTanimlari)
+                    {
+                        <option value="@test.Id">@test.TestAdi (@test.TestKodu)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Sonuç Değeri</label>
+                <InputText class="form-control" @bind-Value="yeniSonucFormu.Deger" />
+            </div>
+            <div class="col-md-2 mb-3 align-self-end">
+                <button type="submit" class="btn btn-info w-100">Ekle</button>
+            </div>
+        </div>
+    </EditForm>
+
+    <hr />
+
+    <div class="text-end">
+        <button class="btn btn-success btn-lg" @onclick="HandleRaporOnayla">
+            Raporu Tamamla ve Onayla
+        </button>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int RaporId { get; set; } 
+
+    private List<Sonuc>? raporunSonuclari;
+    private List<TestTanimi>? testTanimlari; 
+    private SonucEkleModel yeniSonucFormu = new SonucEkleModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ListeleriYukle();
+    }
+
+    private async Task ListeleriYukle()
+    {
+        
+        raporunSonuclari = await LabService.GetRaporSonuclariAsync(RaporId);
+        testTanimlari = await LabService.TestTanimiListeleAsync();
+    }
+
+    private async Task HandleSonucEkle()
+    {
+        if (yeniSonucFormu.TestTanimiId == 0 || string.IsNullOrWhiteSpace(yeniSonucFormu.Deger))
+        {
+            return; 
+        }
+
+        
+        await LabService.SonucEkleAsync(
+            RaporId, 
+            yeniSonucFormu.TestTanimiId,
+            yeniSonucFormu.Deger
+        );
+
+        yeniSonucFormu = new SonucEkleModel();
+        await ListeleriYukle(); 
+    }
+
+    private async Task HandleRaporOnayla()
+    {
+        
+        await LabService.RaporOnaylaAsync(RaporId);
+        NavigationManager.NavigateTo("/raporlar"); 
+    }
+
+   
+    public class SonucEkleModel
+    {
+        public int TestTanimiId { get; set; }
+        public string Deger { get; set; }
+    }
+}

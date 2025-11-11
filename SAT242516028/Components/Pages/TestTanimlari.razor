@@ -1,0 +1,123 @@
+﻿@page "/test-tanimlari"
+@using SAT242516028.Models
+@using SAT242516028.Data
+@inject LaboratuvarServisi LabService
+@inject NavigationManager NavigationManager
+
+<h3>Test Tanımları Yönetimi</h3>
+
+<EditForm Model="@yeniTest" OnValidSubmit="HandleKaydet">
+    <DataAnnotationsValidator />
+
+    <h4>@formBaslik</h4>
+
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <label>Test Kodu</label>
+            <InputText class="form-control" @bind-Value="yeniTest.TestKodu" />
+            <ValidationMessage For="@(() => yeniTest.TestKodu)" />
+        </div>
+        <div class="col-md-9 mb-3">
+            <label>Test Adı</label>
+            <InputText class="form-control" @bind-Value="yeniTest.TestAdi" />
+            <ValidationMessage For="@(() => yeniTest.TestAdi)" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label>Birim</label>
+            <InputText class="form-control" @bind-Value="yeniTest.Birim" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label>Referans Aralığı</label>
+            <InputText class="form-control" @bind-Value="yeniTest.ReferansAralik" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Kaydet</button>
+    <button type="button" class="btn btn-secondary" @onclick="FormuTemizle">İptal</button>
+</EditForm>
+
+<hr />
+
+<h4>Kayıtlı Test Tanımları</h4>
+@if (testListesi == null)
+{
+    <p><em>Yükleniyor...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Test Kodu</th>
+                <th>Test Adı</th>
+                <th>Birim</th>
+                <th>Referans Aralığı</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var test in testListesi)
+            {
+                <tr>
+                    <td>@test.TestKodu</td>
+                    <td>@test.TestAdi</td>
+                    <td>@test.Birim</td>
+                    <td>@test.ReferansAralik</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => HandleDuzenle(test)">Düzenle</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => HandleSil(test.Id)">Sil</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TestTanimi> testListesi;
+    private TestTanimi yeniTest = new TestTanimi(); 
+    private string formBaslik = "Yeni Test Tanımı Ekle";
+    private string operation = "insert";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ListeyiYukle();
+    }
+
+    private async Task ListeyiYukle()
+    {
+        
+        testListesi = await LabService.TestTanimiListeleAsync();
+    }
+
+    private async Task HandleKaydet()
+    {
+       
+        await LabService.TestTanimiKaydetAsync(yeniTest, operation);
+        FormuTemizle();
+        await ListeyiYukle();
+    }
+
+    private void HandleDuzenle(TestTanimi duzenlenecekTest)
+    {
+        yeniTest = duzenlenecekTest; 
+        operation = "update";
+        formBaslik = $"Düzenle: {yeniTest.TestAdi}";
+    }
+
+    private async Task HandleSil(int id)
+    {
+        
+        await LabService.TestTanimiSilAsync(id);
+        await ListeyiYukle();
+    }
+
+    private void FormuTemizle()
+    {
+        yeniTest = new TestTanimi();
+        operation = "insert";
+        formBaslik = "Yeni Test Tanımı Ekle";
+    }
+}
