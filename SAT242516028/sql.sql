@@ -1,15 +1,8 @@
-/*
-    BAÞLAMADAN ÖNCE:
-    1. SSMS'de "LaboratuvarDB" adýnda YENÝ bir veritabaný oluþturun.
-    2. Sol üstteki dropdown menüden bu "LaboratuvarDB" veritabanýný seçin.
-    3. Bu script'in tamamýný kopyalayýp "Execute" (Çalýþtýr) butonuna basýn.
-*/
+
+
 GO
 
-----------------------------------------------------------------
--- 1. ADIM: TABLOLARIN OLUÞTURULMASI
--- (Sadece EÐER YOKSA oluþturur)
-----------------------------------------------------------------
+
 
 PRINT '1. Hastalar Tablosu Kontrol Ediliyor/Oluþturuluyor...';
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Hastalar]') AND type in (N'U'))
@@ -89,14 +82,16 @@ GO
 PRINT 'Tüm Tablolar Kontrol Edildi/Oluþturuldu.';
 GO
 
-----------------------------------------------------------------
--- 2. ADIM: STORED PROCEDURE (SP) OLUÞTURULMASI/GÜNCELLENMESÝ
--- (Varsa GÜNCELLER, yoksa OLUÞTURUR)
-----------------------------------------------------------------
 
-PRINT 'sp_Hasta_Yonet Oluþturuluyor/Güncelleniyor...';
+
+PRINT 'sp_Hasta_Yonet Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Hasta_Yonet
+
+IF OBJECT_ID('dbo.sp_Hasta_Yonet', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Hasta_Yonet;
+GO
+
+CREATE PROCEDURE sp_Hasta_Yonet
     @Operation      VARCHAR(10),
     @Id             INT = NULL,
     @TCKimlikNo     VARCHAR(11) = NULL,
@@ -148,9 +143,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_TestTanimi_Yonet Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_TestTanimi_Yonet Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_TestTanimi_Yonet
+IF OBJECT_ID('dbo.sp_TestTanimi_Yonet', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_TestTanimi_Yonet;
+GO
+CREATE PROCEDURE sp_TestTanimi_Yonet
     @Operation      VARCHAR(10),
     @Id             INT = NULL,
     @TestKodu       VARCHAR(50) = NULL,
@@ -187,9 +185,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_Doktor_Listele Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_Doktor_Listele Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Doktor_Listele
+IF OBJECT_ID('dbo.sp_Doktor_Listele', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Doktor_Listele;
+GO
+CREATE PROCEDURE sp_Doktor_Listele
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -199,9 +200,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_Rapor_Olustur Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_Rapor_Olustur Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Rapor_Olustur
+IF OBJECT_ID('dbo.sp_Rapor_Olustur', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Rapor_Olustur;
+GO
+CREATE PROCEDURE sp_Rapor_Olustur
     @HastaId INT,
     @DoktorId INT,
     @Aciklama VARCHAR(1000) = NULL
@@ -213,9 +217,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_Rapor_Listele_Bekleyen Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_Rapor_Listele_Bekleyen Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Rapor_Listele_Bekleyen
+IF OBJECT_ID('dbo.sp_Rapor_Listele_Bekleyen', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Rapor_Listele_Bekleyen;
+GO
+CREATE PROCEDURE sp_Rapor_Listele_Bekleyen
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -241,9 +248,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_Sonuc_Listele_ByRaporId Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_Sonuc_Listele_ByRaporId Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Sonuc_Listele_ByRaporId
+IF OBJECT_ID('dbo.sp_Sonuc_Listele_ByRaporId', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Sonuc_Listele_ByRaporId;
+GO
+CREATE PROCEDURE sp_Sonuc_Listele_ByRaporId
     @RaporId INT
 AS
 BEGIN
@@ -266,9 +276,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_Sonuc_Ekle Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_Sonuc_Ekle Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Sonuc_Ekle
+IF OBJECT_ID('dbo.sp_Sonuc_Ekle', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Sonuc_Ekle;
+GO
+CREATE PROCEDURE sp_Sonuc_Ekle
     @RaporId INT,
     @TestTanimiId INT,
     @Deger VARCHAR(100)
@@ -280,9 +293,12 @@ BEGIN
 END
 GO
 
-PRINT 'sp_Rapor_Onayla Oluþturuluyor/Güncelleniyor...';
+PRINT 'sp_Rapor_Onayla Oluþturuluyor...';
 GO
-CREATE OR ALTER PROCEDURE sp_Rapor_Onayla
+IF OBJECT_ID('dbo.sp_Rapor_Onayla', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Rapor_Onayla;
+GO
+CREATE PROCEDURE sp_Rapor_Onayla
     @RaporId INT
 AS
 BEGIN
@@ -293,18 +309,14 @@ BEGIN
 END
 GO
 
-PRINT 'Tüm Stored Procedureler Baþarýyla Oluþturuldu/Güncellendi.';
+PRINT 'Tüm Stored Procedureler Baþarýyla Oluþturuldu.';
 GO
 
-----------------------------------------------------------------
--- 3. ADIM: (OPSÝYONEL) BAÞLANGIÇ VERÝLERÝ EKLEME
--- (Sadece EÐER YOKSA ekler)
-----------------------------------------------------------------
+
 
 PRINT 'Baþlangýç verileri ekleniyor...';
 GO
 
--- Doktorlar
 IF NOT EXISTS (SELECT 1 FROM Doktorlar WHERE DiplomaNo = '12345')
 BEGIN
     INSERT INTO Doktorlar (AdSoyad, UzmanlikAlani, DiplomaNo) VALUES 
@@ -317,7 +329,6 @@ BEGIN
 END
 GO
 
--- Test Tanýmlarý
 IF NOT EXISTS (SELECT 1 FROM TestTanimlari WHERE TestKodu = 'HB')
 BEGIN
     INSERT INTO TestTanimlari (TestKodu, TestAdi, Birim, ReferansAralik) VALUES
@@ -340,4 +351,4 @@ BEGIN
 END
 GO
 
-PRINT 'Script Tamamlandý.';
+PRINT 'Script Tamamlandý.';
