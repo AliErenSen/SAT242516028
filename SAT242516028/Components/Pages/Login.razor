@@ -1,0 +1,95 @@
+﻿@page "/login"
+@page "/Account/Login"
+@layout SAT242516028.Components.Layout.AuthLayout
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using SAT242516028.Data
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4><i class="bi bi-person-lock"></i> Giriş Yap</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="LoginForm">
+                        <DataAnnotationsValidator />
+
+                        @if (!string.IsNullOrEmpty(ErrorMessage))
+                        {
+                            <div class="alert alert-danger">@ErrorMessage</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">E-Posta</label>
+                            <InputText @bind-Value="Input.Email" class="form-control" placeholder="ornek@email.com" />
+                            <ValidationMessage For="() => Input.Email" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Şifre</label>
+                            <InputText @bind-Value="Input.Password" type="password" class="form-control" placeholder="******" />
+                            <ValidationMessage For="() => Input.Password" />
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">Giriş Yap</button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="card-footer text-center">
+                    <small>Hesabın yok mu? <a href="register">Kayıt Ol</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginModel Input { get; set; } = new();
+
+    private string? ErrorMessage;
+
+    private async Task LoginUser()
+    {
+        try
+        {
+            // Kullanıcı adı yerine Email ile giriş yapıyoruz
+            var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, isPersistent: false, lockoutOnFailure: false);
+
+            if (result.Succeeded)
+            {
+                // forceLoad: true ÇOK ÖNEMLİDİR.
+                NavManager.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                ErrorMessage = "Geçersiz e-posta veya şifre.";
+            }
+        }
+        catch (NavigationException)
+        {
+            // BU BİR HATA DEĞİL, YÖNLENDİRME İSTEĞİDİR.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Bir hata oluştu: " + ex.Message;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "E-posta zorunludur.")]
+        [EmailAddress(ErrorMessage = "Geçerli bir e-posta giriniz.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Şifre zorunludur.")]
+        public string Password { get; set; } = "";
+    }
+}

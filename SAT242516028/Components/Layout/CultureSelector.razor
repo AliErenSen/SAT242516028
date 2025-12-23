@@ -1,0 +1,21 @@
+﻿@using System.Globalization
+@inject NavigationManager NavManager
+
+<div class="dropdown">
+    @* Sadece buradaki 'btn-outline-light' yerine 'btn-outline-dark' yazdık *@
+    <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        Dil: @CultureInfo.CurrentCulture.Name.Substring(0, 2).ToUpper()
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <a class="dropdown-item" href="Culture/Set?culture=tr-TR&redirectUri=@NavManager.Uri">
+                🇹🇷 Türkçe
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="Culture/Set?culture=en-US&redirectUri=@NavManager.Uri">
+                🇺🇸 English
+            </a>
+        </li>
+    </ul>
+</div>

@@ -1,0 +1,114 @@
+﻿@page "/register"
+@page "/Account/Register"
+@layout SAT242516028.Components.Layout.AuthLayout
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using SAT242516028.Data
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white text-center">
+                    <h4><i class="bi bi-person-plus"></i> Kayıt Ol</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="Input" OnValidSubmit="RegisterUser" FormName="RegisterForm">
+                        <DataAnnotationsValidator />
+
+                        @if (!string.IsNullOrEmpty(ErrorMessage))
+                        {
+                            <div class="alert alert-danger">@ErrorMessage</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">E-Posta</label>
+                            <InputText @bind-Value="Input.Email" class="form-control" />
+                            <ValidationMessage For="() => Input.Email" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Şifre</label>
+                            <InputText @bind-Value="Input.Password" type="password" class="form-control" />
+                            <ValidationMessage For="() => Input.Password" />
+                            <small class="text-muted">En az 3 karakter giriniz.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Şifre Tekrar</label>
+                            <InputText @bind-Value="Input.ConfirmPassword" type="password" class="form-control" />
+                            <ValidationMessage For="() => Input.ConfirmPassword" />
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Kayıt Ol</button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="card-footer text-center">
+                    <small>Zaten hesabın var mı? <a href="login">Giriş Yap</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private RegisterModel Input { get; set; } = new();
+
+    private string? ErrorMessage;
+
+    private async Task RegisterUser()
+    {
+        try
+        {
+            var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email };
+            var result = await UserManager.CreateAsync(user, Input.Password);
+
+            if (result.Succeeded)
+            {
+                // Kayıt başarılıysa hemen giriş yap
+                await SignInManager.SignInAsync(user, isPersistent: false);
+                // Anasayfaya yönlendir ve sayfayı yenile
+                NavManager.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                foreach (var error in result.Errors)
+                {
+                    ErrorMessage += error.Description + " ";
+                }
+            }
+        }
+        catch (NavigationException)
+        {
+            // BU BİR HATA DEĞİL, YÖNLENDİRME İSTEĞİDİR.
+            // Bu yüzden bu hatayı yutmayıp fırlatıyoruz ki sayfa yenilensin.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Hata: " + ex.Message;
+        }
+    }
+
+    public class RegisterModel
+    {
+        [Required(ErrorMessage = "E-posta zorunludur.")]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Şifre zorunludur.")]
+        [MinLength(3, ErrorMessage = "Şifre en az 3 karakter olmalıdır.")]
+        public string Password { get; set; } = "";
+
+        [Required(ErrorMessage = "Şifre tekrarı zorunludur.")]
+        [Compare(nameof(Password), ErrorMessage = "Şifreler eşleşmiyor.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

@@ -1,0 +1,20 @@
+﻿@using SAT242516028.Components.Layout
+@using Microsoft.AspNetCore.Components.Routing
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Sayfa Bulunamadı</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="container mt-5 text-center">
+                <div class="alert alert-warning">
+                    <h3>404 - Sayfa Bulunamadı</h3>
+                    <p>Gitmek istediğiniz adres bu uygulamada tanımlı değil.</p>
+                </div>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

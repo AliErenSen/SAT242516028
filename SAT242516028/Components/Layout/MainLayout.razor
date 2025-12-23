@@ -1,0 +1,53 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        @* ÜST MENÜ BAR (TOP ROW) *@
+        <div class="top-row px-4 auth">
+
+            @* 1. DİL SEÇİCİ (SOL TARAFA YASLI) *@
+            <div class="me-auto">
+                <CultureSelector />
+            </div>
+
+            @* 2. GİRİŞ / ÇIKIŞ MENÜSÜ (SAĞ TARAFA YASLI) *@
+            <AuthorizeView>
+                <Authorized>
+                    @* Giriş yapmış kullanıcılar bunu görür *@
+                    <span class="me-3">Merhaba, <b>@context.User.Identity?.Name</b>!</span>
+
+                    <form action="Account/Logout" method="post" class="d-inline">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="/" />
+                        <button type="submit" class="nav-link btn btn-link text-dark d-inline p-0" style="text-decoration: none;">
+                            Çıkış Yap (Logout)
+                        </button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    @* Giriş yapmamış kullanıcılar bunu görür *@
+                    <a href="Account/Register" class="me-3 text-dark text-decoration-none">Kayıt Ol</a>
+                    <a href="Account/Login" class="text-dark text-decoration-none">Giriş Yap</a>
+                </NotAuthorized>
+            </AuthorizeView>
+
+            @* 3. ABOUT LİNKİ *@
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="ms-3">About</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
