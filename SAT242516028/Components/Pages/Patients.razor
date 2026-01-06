@@ -1,0 +1,496 @@
+﻿@page "/patients"
+@attribute [Authorize(Roles = "Admin")]
+<h3>@_localizer["Patient"]</h3>
+
+<hr />
+
+<a class="btn btn-success" href="charts/patients" target="_blank">
+    @($"{_localizer["Patient"]} - {_localizer["Chart"]}")
+</a>
+@if (_myDbModel != null)
+{
+    @if (new[] { Operations.Add, Operations.Update, Operations.Remove, Operations.Detail }.Contains(_operation))
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                <h1 class="fw-bolder text-@_operation.Color()">@(_operation.Description())</h1>
+            </div>
+            <div class="card-body">
+                @foreach (var prop in GetProperties().Where(p => p.Name != "Id"))
+                {
+                    @if (_operation != Operations.Detail && prop.Editable())
+                    {
+                        <div class="input-group mb-2">
+                            <div class="input-group-text fw-bolder w-25">@prop.LocalizedDescription()</div>
+
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="@prop.Name"
+                                   value="@(prop.GetValue(_model, null))"
+                                   @onchange="(ChangeEventArgs e) => OnChange_EditInput(prop.Name, e.Value)" />
+
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3 fw-bolder">@prop.LocalizedDescription()</div>
+                            <div class="col-md-9">@prop.GetValue(_model, null)</div>
+                        </div>
+                    }
+                }
+
+                <div class="btn-group">
+                    @if (_operation != Operations.Detail)
+                    {
+                        <button class="btn btn-@_operation.Color()" @onclick="() => OnClick_Save()">
+                            @_operation.Description()
+                        </button>
+                    }
+                    <button class="btn btn-outline-@Operations.Cancel.Color()" @onclick="() => OnClick_Cancel()">
+                        @Operations.Cancel.Description()
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_operation == Operations.List)
+    {
+        <h1 class="text-@(Operations.List.Color())">
+            @(Operations.List.Description())
+        </h1>
+
+        <!-- pagination start-->
+        <div class="row g-2">
+
+            <div class="col-md-2">
+                <input class="form-control" readonly
+                       value="@($"{(PageNumber - 1) * PageSize + 1} - {System.Math.Min(TotalRecordCount, PageNumber * PageSize)} / ({TotalRecordCount})")" />
+            </div>
+
+            <div class="col-md-2">
+                <select class="form-select" value="@OrderBy"
+                        @onchange="e => OnChange_OrderBy(e.Value)">
+
+                    @foreach (var ob in _myDbModel.OrderByItems)
+                    {
+                        <option value="@ob.Value">@ob.Key</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-1">
+                <select class="form-select"
+                        value="@PageSize"
+                        @onchange="e => OnChange_PageSize(e.Value)">
+
+                    @foreach (var ps in new[] { 1, 5, 10, 20, 50, 100, 500, 1000, int.MaxValue })
+                    {
+                        <option value="@ps">@((ps == int.MaxValue ? "∞" : ps.ToString()))</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-1">
+                <select class="form-select"
+                        value="@PageNumber"
+                        @onchange="e => OnChange_PageNumber(e.Value)">
+
+                    @for (var pn = 1; pn <= TotalPageCount; pn++)
+                    {
+                        <option value="@pn">@pn</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6">
+
+                @if (TotalRecordCount > 0 && TotalPageCount > 1)
+                {
+                    <ul class="pagination">
+
+
+                        @if (PageNumber > 1)
+                        {
+                            <li class="page-item">
+                                <button class="page-link" @onclick="() => GoToPage(1)">@("<<")</button>
+                            </li>
+                            <li class="page-item">
+                                <button class="page-link" @onclick="PrevPage">@("<")</button>
+                            </li>
+                        }
+
+                        @for (var pn = Math.Max(1, PageNumber - 2); pn <= Math.Min(TotalPageCount, PageNumber + 2); pn++)
+                        {
+                            var pnx = pn;
+                            <li class="page-item @(pnx == PageNumber ? "active" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(pnx)">@pnx</button>
+                            </li>
+                        }
+
+                        @if (PageNumber < TotalPageCount)
+                        {
+                            <li class="page-item">
+                                <button class="page-link" @onclick="NextPage">@(">")</button>
+                            </li>
+                            <li class="page-item">
+                                <button class="page-link" @onclick="() => GoToPage(TotalPageCount)">
+                                    @((MarkupString)$">> <span class='fst-italic' style='font-size:0.7rem; color:#999;'>({TotalPageCount})</span>")
+                                </button>
+                            </li>
+                        }
+
+                    </ul>
+                }
+
+            </div>
+
+        </div>
+
+        <!-- pagination end-->
+
+        <table class="table-striped table">
+
+            <thead>
+                <tr>
+                    <th>
+                        <button class="btn btn-outline-@(Operations.Add.Color())"
+                                @onclick="() => OnClick_Operation(Operations.Add)">
+                            @(Operations.Add.Description())
+                        </button>
+                    </th>
+
+                    @foreach (var prop in GetProperties())
+                    {
+                        <th>@prop.LocalizedDescription()</th>
+                    }
+
+                </tr>
+
+                <tr>
+                    <th>
+                        <button class="btn btn-outline-@Operations.Reset.Color()"
+                                @onclick="() => OnChange_Filter_Reset()">
+                            @(Operations.Reset.Description())
+                        </button>
+                    </th>
+                    @foreach (var prop in GetProperties())
+                    {
+                        <th>
+                            <input type="text"
+                                   class="form-control text-center"
+                                   placeholder="@prop.LocalizedDescription()"
+                                   value="@Parameter_GetValue(prop.Name)"
+                                   @onchange="(ChangeEventArgs e) => OnChange_Filter(prop.Name, e.Value)" />
+                        </th>
+                    }
+                </tr>
+
+            </thead>
+            <tbody>
+                @foreach (var item in _myDbModel.Items)
+                {
+                    <tr>
+                        <td>
+                            <div class="btn-group">
+                                @foreach (var op in new[] { Operations.Detail, Operations.Update, Operations.Remove })
+                                {
+                                    <button class="btn btn-outline-@op.Color()"
+                                            @onclick="() => OnClick_Operation(op, item.Id)">
+                                        @(op.Description())
+                                    </button>
+                                }
+                            </div>
+                        </td>
+
+                        @foreach (var prop in GetProperties())
+                        {
+                            <td>
+                                @(prop.GetValue(item, null))
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@using System.Reflection
+@using Microsoft.AspNetCore.Authorization
+@using MyDbModels
+@using MyEnums
+@using Extensions
+@using Providers
+@using SAT242516028.Entities
+
+
+@using E= SAT242516028.Entities.Patient
+@using global::Providers
+
+
+@inject IMyDbModel<E> _myDbModel
+@inject IMyDbModel_Provider _myDbModel_Provider
+@inject IJSRuntime JS
+
+@inject ILogger<SAT242516028.Entities.Patient> Logger
+@rendermode InteractiveServer
+
+@code {
+
+    string _spName_List = "Sp_Patients";
+    string _spName_Add_Update_Remove = "sp_Patient_Add_Update_Remove";
+
+    E _model = new();
+
+    #region OnAfterRenderAsync
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _myDbModel.Parameters.OrderBy = "Id asc";
+
+            await GetItemsAsync();
+        }
+    }
+
+    #endregion
+
+    #region GetItems, GetItemsAsync
+
+    private async void GetItems() => await GetItemsAsync();
+
+    async Task GetItemsAsync()
+    {
+        _operation = Operations.List;
+
+        await _myDbModel_Provider.Execute<E>(_myDbModel, _spName_List);
+
+        Logger.LogInformation($"{typeof(E).Name} : GetItems");
+
+        StateHasChanged();
+    }
+
+    #endregion
+
+    #region Filters
+
+    private string Parameter_GetValue(string name) =>
+        _myDbModel.Parameters.Where.ContainsKey(name) ? _myDbModel.Parameters.Where[name] : null;
+
+    void OnChange_Filter(string columnName, object value)
+    {
+        if (_myDbModel.Parameters.Where.ContainsKey(columnName))
+        {
+            if (string.IsNullOrEmpty(value.ToString()))
+                _myDbModel.Parameters.Where.Remove(columnName);
+            else
+                _myDbModel.Parameters.Where[columnName] = value.ToString();
+        }
+        else if (!string.IsNullOrEmpty(value.ToString()))
+            _myDbModel.Parameters.Where.Add(columnName, value.ToString());
+
+        GetItems();
+    }
+
+    private void OnChange_Filter_Reset()
+    {
+        _myDbModel.Parameters.Where.Clear();
+        GetItems();
+    }
+
+    #endregion
+
+    #region Pagination
+
+    private int TotalRecordCount => _myDbModel.Parameters.TotalRecordCount;
+    private int TotalPageCount => _myDbModel.Parameters.TotalPageCount;
+
+    public string OrderBy
+    {
+        get => _myDbModel.Parameters.OrderBy;
+        set
+        {
+            _myDbModel.Parameters.OrderBy = value;
+            GetItems();
+        }
+    }
+
+    private int PageSize
+    {
+        get => _myDbModel.Parameters.PageSize;
+        set
+        {
+            _myDbModel.Parameters.PageSize = value switch
+            {
+                0 => int.MaxValue,
+                < 0 => 10,
+                _ => value
+            };
+
+            GetItems();
+        }
+    }
+
+    private int PageNumber
+    {
+        get => _myDbModel.Parameters.PageNumber;
+        set
+        {
+            _myDbModel.Parameters.PageNumber = value;
+
+            GetItems();
+        }
+    }
+
+
+    void OnChange_OrderBy(object value)
+    {
+        _myDbModel.Parameters.OrderBy = value.ToString();
+        GetItems();
+    }
+
+    void OnChange_PageSize(object value)
+    {
+        int.TryParse(value.ToString(), out var ps);
+
+        ps = ps switch
+        {
+            0 => int.MaxValue,
+            < 0 => 5,
+            _ => ps
+        };
+
+        _myDbModel.Parameters.PageSize = ps;
+
+        GetItems();
+    }
+
+    void OnChange_PageNumber(object value)
+    {
+        int.TryParse(value.ToString(), out var pn);
+
+        if (pn <= 0)
+            pn = 1;
+        else if (pn > _myDbModel.Parameters.TotalPageCount)
+            pn = _myDbModel.Parameters.TotalPageCount;
+
+        _myDbModel.Parameters.PageNumber = pn;
+
+        GetItems();
+    }
+
+    private void PrevPage()
+    {
+        if (PageNumber > 1)
+            PageNumber--;
+    }
+
+    private void NextPage()
+    {
+        if (PageNumber < TotalPageCount)
+            PageNumber++;
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= TotalPageCount)
+            PageNumber = page;
+    }
+
+    #endregion
+
+    #region Operations => Add/Update/Remove => Save/Cancel
+
+    Operations _operation = Operations.List;
+
+
+    private void OnClick_Operation(Operations operation, int? id = 0)
+    {
+        _operation = operation;
+
+        _model = operation == Operations.Add ? new E() : _myDbModel.Items.FirstOrDefault(f => f.Id == id);
+    }
+
+    private async void OnClick_Save()
+    {
+        var jsonvalues = System.Text.Json.JsonSerializer.Serialize(_model);
+
+        var results = await _myDbModel_Provider
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(_spName_Add_Update_Remove
+                , ("operation", _operation.ToString().ToLower())
+                , ("jsonvalues", jsonvalues)
+            );
+
+        var result = results.FirstOrDefault();
+
+        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
+
+        Logger.LogInformation($"{typeof(E).Name} => {_operation}: {jsonvalues}");
+
+        await GetItemsAsync();
+    }
+
+    private void OnClick_Cancel() => _operation = Operations.List;
+
+
+    private void OnChange_EditInput(string name, object value)
+    {
+        var prop = typeof(E).GetProperty(name);
+        if (prop == null) return;
+
+        var targetType = prop.PropertyType;
+
+        var underlyingType = Nullable.GetUnderlyingType(targetType);
+
+        var finalType = underlyingType ?? targetType;
+
+        try
+        {
+            object convertedValue = null;
+
+            if (value == null || (value is string s && string.IsNullOrWhiteSpace(s)))
+            {
+                if (underlyingType == null && targetType.IsValueType)
+                    return;
+
+                convertedValue = null;
+            }
+            else
+            {
+                if (finalType == typeof(Guid))
+                {
+                    convertedValue = Guid.Parse(value.ToString());
+                }
+                else if (finalType.IsEnum)
+                {
+                    convertedValue = Enum.Parse(finalType, value.ToString());
+                }
+                else
+                {
+                    convertedValue = Convert.ChangeType(value.ToString(), finalType);
+                }
+            }
+
+            prop.SetValue(_model, convertedValue);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Dönüşüm hatası: {name} alanı için '{value}' değeri {finalType} tipine çevrilemedi. Hata: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Models
+
+    private IEnumerable<PropertyInfo> GetProperties() =>
+        typeof(E).GetProperties().Where(p => p.GetIndexParameters().Length == 0);
+
+    #endregion
+
+
+}
+

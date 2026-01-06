@@ -1,0 +1,146 @@
+﻿@page "/reports/patient"
+@attribute [Authorize(Roles = "Admin,User")]
+<h3>Hasta Raporu</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <strong>Hata Oluştu:</strong>
+        <pre>@errorMessage</pre>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(pdfDataUrl))
+{
+    <iframe src="@pdfDataUrl" width="100%" height="700px" style="border:none;"></iframe>
+}
+else if (string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p>PDF Hazırlanıyor... (@statusStep)</p>
+        <small class="text-muted">@debugInfo</small>
+    </div>
+}
+
+@using Microsoft.AspNetCore.Authorization
+@using MyDbModels
+@using Providers
+@using MyReports
+@using SAT242516028.Entities
+@inject IMyDbModel_Provider _myDbModel_Provider
+@inject IMyDbModel<Patient> _myDbModel
+@inject IJSRuntime JS
+
+@code {
+    string? pdfDataUrl;
+    string? errorMessage;
+    string statusStep = "Başlatılıyor";
+    string debugInfo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            statusStep = "Veritabanından veri çekiliyor...";
+            debugInfo = "OnInitializedAsync başladı";
+
+            _myDbModel.Parameters.PageSize = 100;
+            await _myDbModel_Provider.Execute<Patient>(_myDbModel, "Sp_Patients");
+
+            debugInfo = $"SP çalıştı. Item sayısı: {_myDbModel.Items?.Count() ?? 0}";
+
+            if (_myDbModel.Items == null || !_myDbModel.Items.Any())
+            {
+                errorMessage = "SQL'den veri dönmedi. Prosedürü (Sp_Evaluations) kontrol edin.";
+                return;
+            }
+
+            statusStep = $"PDF oluşturuluyor... ({_myDbModel.Items.Count()} kayıt)";
+            StateHasChanged();
+
+            await GeneratePdfAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"HATA: {ex.GetType().Name}\n";
+            errorMessage += $"Mesaj: {ex.Message}\n";
+            errorMessage += $"StackTrace: {ex.StackTrace}\n";
+
+            if (ex.InnerException != null)
+            {
+                errorMessage += $"\nInner Exception: {ex.InnerException.Message}\n";
+                errorMessage += $"Inner StackTrace: {ex.InnerException.StackTrace}";
+            }
+
+            debugInfo = "Exception yakalandı";
+        }
+    }
+
+    private async Task GeneratePdfAsync()
+    {
+        try
+        {
+            debugInfo = "GeneratePdfAsync başladı";
+
+            var campaignList = _myDbModel.Items.ToList();
+            debugInfo = $"Liste oluşturuldu: {campaignList.Count} item";
+
+            statusStep = "QuestPDF başlatılıyor...";
+            StateHasChanged();
+            await Task.Delay(50);
+
+            var report = new Report_Patient();
+
+            debugInfo = "Generate metodu çağrılıyor...";
+            byte[] pdfBytes = null;
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    pdfBytes = report.Generate(campaignList);
+                }
+                catch (Exception innerEx)
+                {
+                    throw new Exception($"PDF Generate hatası: {innerEx.Message}", innerEx);
+                }
+            });
+
+            debugInfo = $"PDF oluşturuldu: {pdfBytes?.Length ?? 0} bytes";
+
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                errorMessage = "PDF bytes boş döndü!";
+                return;
+            }
+
+            statusStep = "PDF encode ediliyor...";
+            pdfDataUrl = $"data:application/pdf;base64,{Convert.ToBase64String(pdfBytes)}";
+
+            statusStep = "Tamamlandı";
+            debugInfo = $"PDF base64 uzunluğu: {pdfDataUrl.Length}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"PDF OLUŞTURMA HATASI:\n";
+            errorMessage += $"Tip: {ex.GetType().Name}\n";
+            errorMessage += $"Mesaj: {ex.Message}\n";
+            errorMessage += $"StackTrace:\n{ex.StackTrace}\n";
+
+            if (ex.InnerException != null)
+            {
+                errorMessage += $"\n=== INNER EXCEPTION ===\n";
+                errorMessage += $"Tip: {ex.InnerException.GetType().Name}\n";
+                errorMessage += $"Mesaj: {ex.InnerException.Message}\n";
+                errorMessage += $"StackTrace:\n{ex.InnerException.StackTrace}";
+            }
+
+            debugInfo = $"Exception yakalandı: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+}

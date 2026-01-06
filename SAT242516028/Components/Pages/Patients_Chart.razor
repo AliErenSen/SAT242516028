@@ -1,0 +1,112 @@
+﻿@page "/charts/patients"
+@attribute [Authorize]
+
+<h1 class="text-success">
+    @($"{_localizer["Patient"]} - {_localizer["Analysis"]}")
+</h1>
+
+<div class="row g-5 row-cols-2">
+    <div class="col">
+        <canvas id="myBarChart"></canvas>
+    </div>
+    <div class="col">
+        <canvas id="myLineChart"></canvas>
+    </div>
+    <div class="col">
+        <canvas id="myAreaChart"></canvas>
+    </div>
+    <div class="col">
+        <canvas id="myHorizontalBarChart"></canvas>
+    </div>
+</div>
+
+@using Microsoft.AspNetCore.Authorization
+@using Extensions
+@using MyHelpers
+@using Providers
+
+@inject IMyDbModel_Provider _myDbModel_Provider
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+@code {
+    int _count_Series = 12;
+
+    string _spName_Chart = "Sp_Patients_Chart";
+
+    string[] _seriesNames = {
+        "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+        "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+    };
+
+    private async Task<(string[] labels, IEnumerable<ChartSeries> seriesList)> GetSeriesList(int _seriesCount = 1)
+    {
+        var results = await _myDbModel_Provider.GetItems<PatientChartModel>(_spName_Chart);
+
+        var labels = results.Select(s => s.PatientName ?? "Tanımsız").ToArray();
+
+        var colors = Helpers_Color.GetColors(_seriesCount).ToList();
+
+        var seriesList = new List<ChartSeries>();
+
+        for (int i = 0; i < _count_Series; i++)
+        {
+            seriesList.Add(new ChartSeries
+                {
+                    Label = _seriesNames.Length > i ? _seriesNames[i] : $"Ay {i + 1}",
+
+                    Data = results.Select(s => Convert.ToDouble(s.Counts[i])).ToArray(),
+
+                    BackgroundColor = colors[i].bg,
+                    BorderColor = colors[i].border,
+                });
+        }
+
+        return (labels, seriesList);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var (labels, seriesList) = await GetSeriesList(_count_Series);
+
+            await JS.InvokeVoidAsync("drawBarChart", "myBarChart", labels, seriesList.ToArray(), true, true);
+            await JS.InvokeVoidAsync("drawLineChart", "myLineChart", labels, seriesList.ToArray(), true, true, false);
+            await JS.InvokeVoidAsync("drawLineChart", "myAreaChart", labels, seriesList.ToArray(), true, true, true);
+            await JS.InvokeVoidAsync("drawBarChart", "myHorizontalBarChart", labels, seriesList.ToArray(), true, true, 'y');
+        }
+    }
+
+    public class ChartSeries
+    {
+        public string Label { get; set; }
+        public double[] Data { get; set; }
+        public string BackgroundColor { get; set; }
+        public string BorderColor { get; set; }
+    }
+
+    class PatientChartModel
+    {
+        public int PatientId { get; set; }
+        public string PatientName { get; set; }
+
+        public int Ocak { get; set; }
+        public int Subat { get; set; }
+        public int Mart { get; set; }
+        public int Nisan { get; set; }
+        public int Mayis { get; set; }
+        public int Haziran { get; set; }
+        public int Temmuz { get; set; }
+        public int Agustos { get; set; }
+        public int Eylul { get; set; }
+        public int Ekim { get; set; }
+        public int Kasim { get; set; }
+        public int Aralik { get; set; }
+
+        public int[] Counts => [
+            Ocak, Subat, Mart, Nisan, Mayis, Haziran,
+        Temmuz, Agustos, Eylul, Ekim, Kasim, Aralik
+        ];
+    }
+}
